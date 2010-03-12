@@ -95,7 +95,7 @@ int main()
 	using namespace std;
 	using namespace boost;
 
-	const size_t N = 21;
+	const size_t N = 101;
 
 	for(int count = 0; count < 100000;) {
 		grid_lattice<N> grid;
