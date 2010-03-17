@@ -3,8 +3,9 @@
 #include <iostream>
 #include <map>
 #include <utility>
+#include <cstdlib>
 
-boost::mt19937 rng;
+boost::mt19937 rng(static_cast<uint32_t>(::time(0)));
 
 template <size_t N>
 struct grid_lattice {
