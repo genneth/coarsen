@@ -4,12 +4,13 @@
 #include <map>
 #include <utility>
 #include <cstdlib>
+#include <boost/multi_array.hpp>
 
 boost::mt19937 rng(static_cast<uint32_t>(::time(0)));
 
 template <int N>
 struct grid_lattice {
-	explicit grid_lattice(): time(0.0), g({{0}}) {
+	explicit grid_lattice(): time(0.0), g(boost::extents[N][N]) {
 		active[std::make_pair(N/2,N/2)] = 0;
 		set(N/2, N/2, 1);
 	}
@@ -79,7 +80,7 @@ struct grid_lattice {
 	double time;
 
 private:
-	unsigned int g[N][N];
+	boost::multi_array<unsigned int, 2> g;
 	typedef std::map<std::pair<int,int>, unsigned int> active_list_t;
 	active_list_t active;
 
@@ -117,7 +118,7 @@ int main()
 	using namespace std;
 	using namespace boost;
 
-	const int N = 101;
+	const int N = 10001;
 
 	for(int count = 0; count < 1;) {
 		grid_lattice<N> grid;
@@ -125,11 +126,11 @@ int main()
 			double dt = grid.next_event();
 			grid.flip();
 			grid.time += dt;
-		} while(grid.time < 500.0 && !grid.empty());
+		} while(grid.time < 5000.0 && !grid.empty());
 
 		if(!grid.empty()) {
 			cout << grid.size() << endl;
-			cout << grid << endl;
+//			cout << grid << endl;
 			count++;
 		}
 	}
