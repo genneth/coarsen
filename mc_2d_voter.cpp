@@ -3,8 +3,12 @@
 #include <iostream>
 #include <map>
 #include <utility>
+#include <list>
+#include <boost/filesystem.hpp>
+#include <cstdlib>
+#include <boost/filesystem/fstream.hpp>
 
-boost::mt19937 rng;
+boost::mt19937 rng(static_cast<uint32_t>(::time(0)));
 
 template <size_t N>
 struct grid_lattice {
@@ -22,12 +26,14 @@ struct grid_lattice {
 		if(cell(i,j) == o) return;
 		else if(o) { // up
 			cell_(i,j) = o;
+			flips.push_back(std::make_pair(time, std::make_pair(i,j)));
 			inc_neighbours(i+1,j);
 			inc_neighbours(i-1,j);
 			inc_neighbours(i,j+1);
 			inc_neighbours(i,j-1);
 		} else { // down
 			cell_(i,j) = o;
+			flips.push_back(std::make_pair(time, std::make_pair(i,j)));
 			if(labelled_neighbours(i,j) == 0)
 				active.erase(std::make_pair(i,j));
 			dec_neighbours(i+1,j);
@@ -75,12 +81,38 @@ struct grid_lattice {
 			(unsigned int)(d4()) > c->second ? 0 : 1);
 	}
 
+	void save_animation(const boost::filesystem::path & dir) const {
+		using namespace boost::filesystem;
+
+		unsigned int g[N][N] = {{0}};
+
+		remove_all(dir); // rm -rf --- no errors if not existing
+		create_directory(dir);
+
+		for(flip_list_t::const_iterator f = flips.begin(); f != flips.end(); ++f) {
+			g[f->second.first][f->second.second] = 
+				1 - g[f->second.first][f->second.second];
+			char filename[100];
+			std::sprintf(filename, "%014lu.pbm", static_cast<unsigned long>(f->first*1000000000ul));
+			ofstream file(dir / filename);
+			file << "P1" << std::endl;
+			file << N << " " << N << std::endl;
+			for(unsigned int i = 0; i < N; ++i) {
+				for(unsigned int j = 0; j < N; ++j)
+					file << g[i][j] << " ";
+				file << std::endl;
+			}
+		}
+	}
+
 	double time;
 
 private:
 	unsigned int g[N][N];
 	typedef std::map<std::pair<size_t,size_t>, unsigned int> active_list_t;
 	active_list_t active;
+	typedef std::list<std::pair<double, std::pair<size_t,size_t> > > flip_list_t;
+	flip_list_t flips;
 
 	unsigned int & cell_(size_t i, size_t j) {return g[i%N][j%N];}
 	void inc_neighbours(size_t i, size_t j) {
@@ -113,7 +145,7 @@ int main()
 	using namespace std;
 	using namespace boost;
 
-	const size_t N = 101;
+	const size_t N = 501;
 
 	for(int count = 0; count < 1;) {
 		grid_lattice<N> grid;
@@ -121,11 +153,11 @@ int main()
 			double dt = grid.next_event();
 			grid.flip();
 			grid.time += dt;
-		} while(grid.time < 50.0 && !grid.empty());
+		} while(grid.time < 500.0 && grid.size() > 200);
 
-		if(!grid.empty()) {
+		if(grid.size() > 200) {
 			cout << grid.size() << endl;
-			cout << grid << endl;
+			grid.save_animation("1");
 			count++;
 		}
 	}
