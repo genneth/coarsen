@@ -9,18 +9,32 @@ boost::mt19937 rng;
 template <size_t N>
 struct grid_lattice {
 	explicit grid_lattice(): time(0.0), g({{0}}) {
+		active[std::make_pair(N/2,N/2)] = 0;
 		set(N/2, N/2, 1);
 	}
 
 	unsigned int cell(size_t i, size_t j) const {return g[i%N][j%N];}
 	void set(size_t i, size_t j, unsigned int o) {
-		// precondition: cell(i,j) is active
-		cell_(i,j) = o;
-		update_active(i,j);
-		update_active(i+1,j);
-		update_active(i-1,j);
-		update_active(i,j+1);
-		update_active(i,j-1);
+		// precondition: active.find(make_pair(i,j)) != active.end();
+		// also, if cell(i,j) then its neighbours are in active
+
+		// asymmetry in flipping
+		if(cell(i,j) == o) return;
+		else if(o) { // up
+			cell_(i,j) = o;
+			inc_neighbours(i+1,j);
+			inc_neighbours(i-1,j);
+			inc_neighbours(i,j+1);
+			inc_neighbours(i,j-1);
+		} else { // down
+			cell_(i,j) = o;
+			if(labelled_neighbours(i,j) == 0)
+				active.erase(std::make_pair(i,j));
+			dec_neighbours(i+1,j);
+			dec_neighbours(i-1,j);
+			dec_neighbours(i,j+1);
+			dec_neighbours(i,j-1);
+		}
 	}
 
 	size_t labelled_neighbours(size_t i, size_t j) const {
@@ -47,6 +61,7 @@ struct grid_lattice {
 	}
 
 	void flip() {
+		// precondition: !empty();
 		using namespace boost;
 		uniform_int<> active_cell(0, active.size()-1);
 		variate_generator<mt19937 &, uniform_int<> >
@@ -68,14 +83,17 @@ private:
 	active_list_t active;
 
 	unsigned int & cell_(size_t i, size_t j) {return g[i%N][j%N];}
-	void update_active(size_t i, size_t j) {
-		using namespace std;
-		unsigned int o = cell(i,j);
-		size_t n = labelled_neighbours(i, j);
-		if(o != 0 || n > 0)
-			active[make_pair(i,j)] = n;
+	void inc_neighbours(size_t i, size_t j) {
+		active_list_t::iterator c = active.find(std::make_pair(i,j));
+		if(c == active.end())
+			active[std::make_pair(i,j)] = 1;
 		else
-			active.erase(make_pair(i,j));
+			c->second++;
+	}
+	void dec_neighbours(size_t i, size_t j) {
+		active_list_t::iterator c = active.find(std::make_pair(i,j));
+		if(--c->second == 0 && cell(i,j) == 0)
+			active.erase(c);
 	}
 };
 
@@ -97,7 +115,7 @@ int main()
 
 	const size_t N = 101;
 
-	for(int count = 0; count < 100000;) {
+	for(int count = 0; count < 1;) {
 		grid_lattice<N> grid;
 		do {
 			double dt = grid.next_event();
@@ -107,7 +125,7 @@ int main()
 
 		if(!grid.empty()) {
 			cout << grid.size() << endl;
-//			cout << grid << endl;
+			cout << grid << endl;
 			count++;
 		}
 	}
