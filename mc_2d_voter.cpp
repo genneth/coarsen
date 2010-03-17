@@ -156,7 +156,7 @@ int main()
 			double dt = grid.next_event();
 			grid.flip();
 			grid.time += dt;
-		} while(grid.time < 500.0 && grid.size() > 200);
+		} while(grid.time < 500.0 && !grid.empty());
 
 		if(grid.size() > 200) {
 			cout << grid.size() << endl;
