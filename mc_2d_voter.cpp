@@ -77,6 +77,13 @@ struct grid_lattice {
 			(unsigned int)(d4()) > c->second ? 0 : 1);
 	}
 
+	void restart() {
+		// precondition: empty();
+		time = 0.0;
+		active[std::make_pair(N/2,N/2)] = 0;
+		set(N/2, N/2, 1);
+	}
+
 	double time;
 
 private:
@@ -122,11 +129,13 @@ int main()
 
 	for(int count = 0; count < 1;) {
 		grid_lattice<N> grid;
-		do {
+		while(true) {
 			double dt = grid.next_event();
-			grid.flip();
 			grid.time += dt;
-		} while(grid.time < 5000.0 && !grid.empty());
+			if(grid.time > 5000.0) break;
+			grid.flip();
+			if(grid.empty()) grid.restart();
+		}
 
 		if(!grid.empty()) {
 			cout << grid.size() << endl;
