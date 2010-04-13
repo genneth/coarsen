@@ -99,14 +99,14 @@ private:
 		sanitise(i,j);
 		active_list_t::iterator c = active.find(std::make_pair(i,j));
 		if(c == active.end())
-			active[std::make_pair(i,j)] = 1;
+			active.insert(std::make_pair(std::make_pair(i,j), 1));
 		else
 			c->second++;
 	}
 	void dec_neighbours(int i, int j) {
 		sanitise(i,j);
 		active_list_t::iterator c = active.find(std::make_pair(i,j));
-		if(--c->second == 0 && cell(i,j) == 0)
+		if(--(c->second) == 0 && cell(i,j) == 0)
 			active.erase(c);
 	}
 };
@@ -126,12 +126,12 @@ int main(int argc, char ** argv)
 	using namespace std;
 	using namespace boost;
 
-	if(argc < 2) {
-		cout << "usage: " << argv[0] << " <grid size> <time>" << endl;
+	if(argc <= 3) {
+		cout << "usage: " << argv[0] << " <grid size> <time> <runs>" << endl;
 		return -1;
 	}
 
-	for(int count = 0; count < 1;) {
+	for(int count = 0; count < atoi(argv[3]);) {
 		grid_lattice grid(atoi(argv[1]));
 		while(true) {
 			double dt = grid.next_event();
