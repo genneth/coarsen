@@ -8,9 +8,8 @@
 
 boost::mt19937 rng(static_cast<uint32_t>(::time(0)));
 
-template <int N>
 struct grid_lattice {
-	explicit grid_lattice(): time(0.0), g(boost::extents[N][N]) {
+	explicit grid_lattice(int N_): time(0.0), N(N_), g(boost::extents[N][N]) {
 		active[std::make_pair(N/2,N/2)] = 0;
 		set(N/2, N/2, 1);
 	}
@@ -85,6 +84,7 @@ struct grid_lattice {
 	}
 
 	double time;
+	const int N; // grid size
 
 private:
 	boost::multi_array<unsigned int, 2> g;
@@ -109,30 +109,32 @@ private:
 	}
 };
 
-template <int N>
-std::ostream & operator<<(std::ostream & os, const grid_lattice<N> & g)
+std::ostream & operator<<(std::ostream & os, const grid_lattice & g)
 {
-	for(unsigned int i = 0; i < N; ++i) {
-		for(unsigned int j = 0; j < N; ++j)
+	for(int i = 0; i < g.N; ++i) {
+		for(int j = 0; j < g.N; ++j)
 			os << g.cell(i,j) << " ";
 		os << std::endl;
 	}
 	return os;
 }
 
-int main()
+int main(int argc, char ** argv)
 {
 	using namespace std;
 	using namespace boost;
 
-	const int N = 10001;
+	if(argc < 2) {
+		cout << "usage: " << argv[0] << " <grid size> <time>" << endl;
+		return -1;
+	}
 
 	for(int count = 0; count < 1;) {
-		grid_lattice<N> grid;
+		grid_lattice grid(atoi(argv[1]));
 		while(true) {
 			double dt = grid.next_event();
 			grid.time += dt;
-			if(grid.time > 5000.0) break;
+			if(grid.time > atof(argv[2])) break;
 			grid.flip();
 			if(grid.empty()) grid.restart();
 		}
