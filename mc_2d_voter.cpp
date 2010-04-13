@@ -9,13 +9,15 @@
 boost::mt19937 rng(static_cast<uint32_t>(::time(0)));
 
 struct grid_lattice {
+	typedef char cell_t;
+
 	explicit grid_lattice(int N_): time(0.0), N(N_), g(boost::extents[N][N]) {
 		active[std::make_pair(N/2,N/2)] = 0;
 		set(N/2, N/2, 1);
 	}
 
-	unsigned int cell(int i, int j) const {sanitise(i,j); return g[i][j];}
-	void set(int i, int j, unsigned int o) {
+	cell_t cell(int i, int j) const {sanitise(i,j); return g[i][j];}
+	void set(int i, int j, cell_t o) {
 		// precondition: active.find(make_pair(i,j)) != active.end();
 		// also, if cell(i,j) then its neighbours are in active
 
@@ -73,7 +75,7 @@ struct grid_lattice {
 		uniform_int<> four(1, 4);
 		variate_generator<mt19937 &, uniform_int<> > d4(rng, four);
 		set(c->first.first, c->first.second, 
-			(unsigned int)(d4()) > c->second ? 0 : 1);
+			(cell_t)(d4()) > c->second ? 0 : 1);
 	}
 
 	void restart() {
@@ -87,12 +89,12 @@ struct grid_lattice {
 	const int N; // grid size
 
 private:
-	boost::multi_array<unsigned int, 2> g;
-	typedef std::map<std::pair<int,int>, unsigned int> active_list_t;
+	boost::multi_array<cell_t, 2> g;
+	typedef std::map<std::pair<int,int>, cell_t> active_list_t;
 	active_list_t active;
 
 	void sanitise(int & i, int & j) const {i = (i+N)%N; j = (j+N)%N;} // positive dividend
-	unsigned int & cell_(int i, int j) {sanitise(i,j); return g[i][j];}
+	cell_t & cell_(int i, int j) {sanitise(i,j); return g[i][j];}
 	void inc_neighbours(int i, int j) {
 		sanitise(i,j);
 		active_list_t::iterator c = active.find(std::make_pair(i,j));
@@ -113,7 +115,7 @@ std::ostream & operator<<(std::ostream & os, const grid_lattice & g)
 {
 	for(int i = 0; i < g.N; ++i) {
 		for(int j = 0; j < g.N; ++j)
-			os << g.cell(i,j) << " ";
+			os << static_cast<int>(g.cell(i,j)) << " ";
 		os << std::endl;
 	}
 	return os;
