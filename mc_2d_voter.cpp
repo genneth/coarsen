@@ -4,19 +4,71 @@
 #include <map>
 #include <utility>
 #include <cstdlib>
-#include <boost/multi_array.hpp>
+#include <boost/array.hpp>
+#include <boost/assert.hpp>
 
 boost::mt19937 rng(static_cast<uint32_t>(::time(0)));
+
+const int cache_line_size = 256; // 256 bytes per line; might be pessimistic
+
+template <typename T, typename U>
+U * find_next_aligned_addr(T * start_ptr)
+{
+	std::intptr_t start = reinterpret_cast<std::intptr_t>(start_ptr);
+	std::intptr_t aligned = ((start + cache_line_size) / cache_line_size) * cache_line_size;
+	return reinterpret_cast<U *>(aligned);
+}
+
+// presents an interface of 2D array to an array of 64-cell grids
+// so that cache usage is near optimal
+template <typename T>
+struct tiled_array_2d {
+	typedef T value_type;
+
+	tiled_array_2d(size_t rows, size_t cols, T initial):
+		n(rows/8), m(cols/8),
+		storage((T *)std::malloc(sizeof(T)*n*m*64 + cache_line_size)),
+		data(find_next_aligned_addr<T, boost::array<T, 64> >(storage))
+	{
+		BOOST_ASSERT((rows % 8) == 0 && (cols % 8) == 0);
+		for(int i = 0; i < n*m; ++i)
+			for(int j = 0; j < 64; ++j)
+				data[i][j] = initial;
+	}
+
+	tiled_array_2d(const tiled_array_2d<T> & o):
+		n(o.n), m(o.m),
+		storage((T *)std::malloc(sizeof(T)*n*m*64 + cache_line_size)),
+		data(find_next_aligned_addr<T, boost::array<T, 64> >(storage))
+	{
+		for(int i = 0; i < n*m; ++i)
+			for(int j = 0; j < 64; ++j)
+				data[i][j] = o.data[i][j];
+	}
+
+	~tiled_array_2d() {std::free(storage);}
+
+	value_type operator()(int i, int j) const {
+		return data[(i/8)*n + j/8][(i%8)*8 + (j%8)];
+	}
+	value_type & operator()(int i, int j) {
+		return data[(i/8)*n + j/8][(i%8)*8 + (j%8)];
+	}
+
+	const size_t n, m; // in multiples of 8
+	value_type * storage;
+	boost::array<value_type, 64> * data;
+};
 
 struct grid_lattice {
 	typedef char cell_t;
 
-	explicit grid_lattice(int N_): time(0.0), N(N_), g(boost::extents[N][N]) {
+	explicit grid_lattice(int N_): time(0.0), N(N_), g(N,N,0) {
 		active[std::make_pair(N/2,N/2)] = 0;
 		set(N/2, N/2, 1);
 	}
 
-	cell_t cell(int i, int j) const {sanitise(i,j); return g[i][j];}
+	cell_t cell(int i, int j) const {sanitise(i,j); return g(i, j);}
 	void set(int i, int j, cell_t o) {
 		// precondition: active.find(make_pair(i,j)) != active.end();
 		// also, if cell(i,j) then its neighbours are in active
@@ -48,7 +100,7 @@ struct grid_lattice {
 		int s = 0;
 		for(int i = 0; i < N; ++i) {
 			for(int j = 0; j < N; ++j)
-				s += g[i][j];
+				s += g(i, j);
 		}
 		return s;
 	}
@@ -89,12 +141,12 @@ struct grid_lattice {
 	const int N; // grid size
 
 private:
-	boost::multi_array<cell_t, 2> g;
+	tiled_array_2d<char> g;
 	typedef std::map<std::pair<int,int>, cell_t> active_list_t;
 	active_list_t active;
 
 	void sanitise(int & i, int & j) const {i = (i+N)%N; j = (j+N)%N;} // positive dividend
-	cell_t & cell_(int i, int j) {sanitise(i,j); return g[i][j];}
+	cell_t & cell_(int i, int j) {sanitise(i,j); return g(i, j);}
 	void inc_neighbours(int i, int j) {
 		sanitise(i,j);
 		active_list_t::iterator c = active.find(std::make_pair(i,j));
