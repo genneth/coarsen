@@ -6,7 +6,12 @@
 #include <cstdlib>
 #include <boost/multi_array.hpp>
 
-boost::mt19937 rng(static_cast<uint32_t>(::time(0)));
+extern "C" {
+#include <fcntl.h>
+#include <unistd.h>
+}
+
+boost::mt19937 rng;
 
 struct grid_lattice {
 	typedef char cell_t;
@@ -130,6 +135,13 @@ int main(int argc, char ** argv)
 		cout << "usage: " << argv[0] << " <grid size> <time> <runs>" << endl;
 		return -1;
 	}
+
+	int system_random = open("/dev/random", O_RDONLY);
+	uint32_t seed;
+	read(system_random, &seed, 4);
+	close(system_random);
+
+	rng.seed(seed);
 
 	for(int count = 0; count < atoi(argv[3]);) {
 		grid_lattice grid(atoi(argv[1]));
