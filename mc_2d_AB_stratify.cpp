@@ -27,12 +27,26 @@ public:
 		uniform_real<> type_real(0.0, 1.0);
 		variate_generator<mt19937 &, uniform_real<> >
 			type(rng, type_real);
-		uint32_t label = 1;
 		for(int i = 0; i < N; ++i) {
 			for(int j = 0; j < N; ++j) {
 				if(type() < 0.36) { // A
+					g[i][j] = 0x1;
+					nB--;
+				} else { // B
+					g[i][j] = 0;
+				}
+			}
+		}
+		relabel();
+	}
+
+	void relabel() {
+		uint32_t label = 1;
+		for(int i = 0; i < N; ++i) {
+			for(int j = 0; j < N; ++j) {
+				if(g[i][j] & 0x1) { // A
 					g[i][j] = (label << 1) | 0x1;
-					nB--; label++;
+					label++;
 				} else { // B
 					g[i][j] = 0;
 				}
@@ -165,15 +179,23 @@ int main(int argc, char ** argv)
 
 	for(int i = 0; i < atoi(argv[3]); ++i) {
 		grid_lattice grid(atoi(argv[1]));
-	//	std::cout << grid << std::endl;
+
+		grid.time += grid.next_event();
+		while(grid.time < 10.0 && grid.nB > 0 && grid.nB < grid.N*grid.N) {
+			std::pair<int16_t, int16_t> vac = grid.pick_stratifying_cell();
+			grid.migrate_vacancy(vac);
+			grid.time += grid.next_event();
+		}
+
+		grid.time = 0;
+		grid.relabel();
+
 		grid.time += grid.next_event();
 		while(grid.time < atof(argv[2]) && grid.nB > 0 && grid.nB < grid.N*grid.N) {
 			std::pair<int16_t, int16_t> vac = grid.pick_stratifying_cell();
 			grid.migrate_vacancy(vac);
 			grid.time += grid.next_event();
 		}
-
-	//	std::cout << grid << std::endl;
 
 		std::map<uint32_t, uint32_t> hist = grid.histogram();
 		for(std::map<uint32_t, uint32_t>::iterator i = hist.begin();
