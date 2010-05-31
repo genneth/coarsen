@@ -21,6 +21,7 @@ extern "C" {
 }
 
 boost::mt19937 rng; // returns uint32_t
+boost::mt19937 rng2; // used for hashing
 
 struct grid_lattice {
 
@@ -130,16 +131,13 @@ public:
 		file << "P3" << endl;
 		file << N << " " << N << endl;
 		file << "255" << endl;
-		int colour_bits = ceil(log(N*N) / log(2) / 3);
-		cerr << "outputting using " << colour_bits << " bits" << endl;
 		for(int i = 0; i < N; ++i) {
 			for(int j = 0; j < N; ++j) {
 				if(g[i][j]) {
 					uint32_t label = g[i][j] >> 1;
-					std::vector<uint32_t> rgb = hilbert_point(3, colour_bits, label);
-					file << (rgb[0] << (8 - colour_bits)) << " " << 
-					        (rgb[1] << (8 - colour_bits)) << " " << 
-					        (rgb[2] << (8 - colour_bits)) << " ";
+					rng2.seed(label);
+					std::vector<uint32_t> rgb = hilbert_point(3, 8, rng2() >> 8);
+					file << rgb[0] << " " << rgb[1] << " " << rgb[2] << " ";
 				} else
 					file << "0 0 0 ";
 			}
