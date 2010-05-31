@@ -26,7 +26,7 @@ static uint32_t rrot(uint32_t x, uint32_t i, uint32_t width)
 {
 	BOOST_ASSERT(x < (1U << width));
 	i = i%width;
-	x = (x>>i) | (x>>width-i);
+	x = (x>>i) | (x<<(width-i));
 	return x&((1U<<width)-1U);
 }
 
@@ -34,7 +34,7 @@ static uint32_t lrot(uint32_t x, uint32_t i, uint32_t width)
 {
 	BOOST_ASSERT(x < (1U << width));
 	i = i%width;
-	x = (x<<i) | (x>>width-i);
+	x = (x<<i) | (x>>(width-i));
 	return x&((1U<<width)-1U);
 }
 
