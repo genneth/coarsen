@@ -11,6 +11,9 @@
 #include <cstdlib>
 #include <map>
 #include <boost/assert.hpp>
+#include <fstream>
+#include <vector>
+#include "hilbert.hpp"
 
 extern "C" {
 #include <fcntl.h>
@@ -34,12 +37,14 @@ public:
 		BOOST_ASSERT(N%2 == 0);
 
 		using namespace boost;
-		uint32_t label = 1;
 		for(int i = 0; i < N; ++i) {
 			for(int j = 0; j < N; ++j) {
 				if(i % 2 == 0 && j % 2 == 0) { // A
-					g[i][j] = (label << 1) | 0x1;
-					nB--; label++;
+					std::vector<uint32_t> p;
+					p.push_back(i);
+					p.push_back(j);
+					g[i][j] = (hilbert_index(2, ceil(log(N) / log(2)), p) << 1) | 0x1;
+					nB--;
 				} else { // B
 					g[i][j] = 0;
 				}
@@ -119,6 +124,24 @@ public:
 	
 	friend std::ostream & operator<<(std::ostream &, const grid_lattice &);
 
+	void save_as_P3(const char * filename) {
+		using namespace std;
+		ofstream file(filename);
+		file << "P3" << endl;
+		file << N << " " << N << endl;
+		file << "255" << endl;
+		for(int i = 0; i < N; ++i) {
+			for(int j = 0; j < N; ++j) {
+				if(g[i][j]) {
+					std::vector<uint32_t> rgb = hilbert_point(3, 8, g[i][j] + 0x2ffff);
+					file << rgb[0] << " " << rgb[1] << " " << rgb[2] << " ";
+				} else
+					file << "0 0 0 ";
+			}
+			file << endl;
+		}
+	}
+
 private:
 	void sanitise(int & i, int & j) const {
 		// precondition: i,j >= -1
@@ -145,8 +168,8 @@ int main(int argc, char ** argv)
 	using namespace std;
 	using namespace boost;
 
-	if(argc <= 3) {
-		cout << "usage: " << argv[0] << " <grid size> <time> <runs>" << endl;
+	if(argc <= 4) {
+		cout << "usage: " << argv[0] << " <grid size> <time> <runs> <picture>" << endl;
 		return -1;
 	}
 
@@ -174,6 +197,8 @@ int main(int argc, char ** argv)
 				i != hist.end(); ++i) {
 			std::cout << i->second << std::endl;
 		}
+
+		if(i == 0) grid.save_as_P3(argv[4]);
 	}
 
 	return 0;
