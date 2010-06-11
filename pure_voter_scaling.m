@@ -5,7 +5,12 @@ files = {'pure_voter-512-0.txt', ...
     'pure_voter-512-2.txt', ...
     'pure_voter-512-4.txt', ...
     'pure_voter-512-8.txt', ...
-    'pure_voter-512-16.txt'};
+    'pure_voter-512-16.txt', ...
+    'pure_voter-512-32.txt', ...
+    'pure_voter-512-64.txt', ...
+    'pure_voter-512-128.txt', ...
+    'pure_voter-512-256.txt'
+};
 
 colours = [
  0.996078, 0.360784, 0.027451;
@@ -18,13 +23,39 @@ colours = [
  0.890196, 0.0117647, 0.490196;
  0.905882, 0.027451, 0.129412
 ];
+ncolours = 8;
 
-gh = newplot(figure);
+fh = figure;
+gh = newplot(fh);
 set(gh, 'NextPlot', 'add');
 set(gh, 'XLim', [0 5], 'YScale', 'log', 'YLim', [10^-4 1]);
+plot(gh, linspace(0, 5, 30), exp(-linspace(0,5,30)), '-k', 'LineWidth', 1.0);
+av = zeros(size(files));
 for i = 1:numel(files)
-    [mu,p] = pdf_from_observations(files{i});
-    plot(gh, mu, p, '-', 'Color', colours(i,:));
+    [mu,p,av(i)] = cdf_from_observations(files{i});
+    plot(gh, mu, 1-p, '-', 'Color', colours(mod(i-1,ncolours)+1,:) );
 end
+
+legend(gh, {'limit', '0','1','2','4','8','16', '32', '64', '128', '256'});
+
+set(gh, 'FontName', 'Times', 'FontSize', 8);
+xlabel(gh, 'rescaled clone size', 'FontName', 'Times', 'FontSize', 9);
+ylabel(gh, 'cumulative distribution', 'FontName', 'Times', 'FontSize', 9);
+
+
+%avh = newplot(figure);
+%ts = [0 1 2 4 8 16 32 64];
+%plot(avh, ts, pi() .* ts ./ log(ts), '-', ts, av, '+');
+%set(avh, 'XLim', [0 64], 'YLim', [0 50]);
+
+set(fh, 'PaperUnits', 'inches');
+w = 5; h = 3.5;
+set(fh, 'PaperSize', [w h]);
+set(fh, 'PaperPosition', [0 0 w h]);
+
+set(fh, 'Color', 'white');
+
+drawnow;
+print(fh, '-dpdf', 'pure_voter_scaling');
 
 end

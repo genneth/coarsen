@@ -1,4 +1,4 @@
-function [mu, p] = cdf_from_observations(file)
+function [mu, p, average] = cdf_from_observations(file)
 
 ms = load(file);
 total = numel(ms);
